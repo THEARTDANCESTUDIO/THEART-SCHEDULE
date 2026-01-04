@@ -19,7 +19,6 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : INITIAL_SCHEDULE;
   });
 
-  // Secret toggle logic: 5 quick clicks on footer copyright
   const clickCountRef = useRef(0);
   const lastClickTimeRef = useRef(0);
 
@@ -35,12 +34,10 @@ const App: React.FC = () => {
     if (clickCountRef.current >= 5) {
       setIsReadOnly(prev => !prev);
       clickCountRef.current = 0;
-      // Use a subtle visual hint instead of a blocking alert if preferred, but alert is clearer for the user
       console.log("Admin mode toggled");
     }
   };
 
-  // Sync state to local storage
   useEffect(() => {
     localStorage.setItem('theart_dance_schedule', JSON.stringify(schedule));
   }, [schedule]);
@@ -49,15 +46,12 @@ const App: React.FC = () => {
     localStorage.setItem('theart_lang', lang);
   }, [lang]);
 
-  // Derived schedule with translations applied based on current language
-  // This approach is more reactive than manual state swapping
   const displaySchedule = useMemo(() => {
     return schedule.map(row => ({
       ...row,
       days: Object.fromEntries(
         Object.entries(row.days).map(([day, cell]) => {
           let translatedText = cell.className;
-          // Only auto-translate if the text matches one of our known static strings
           for (const mapping of Object.values(STATIC_CONTENT_TRANSLATIONS)) {
             const versions = Object.values(mapping);
             if (versions.includes(cell.className)) {
@@ -114,9 +108,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8 selection:bg-pink-500/30">
-      {/* Action Bar */}
-      <div className="max-w-7xl mx-auto mb-8 flex items-center justify-between no-print">
-        <div className="flex gap-2">
+      {/* Top Action Bar */}
+      <div className="max-w-[1600px] mx-auto mb-8 flex items-center justify-between no-print">
+        <div className="flex gap-2 min-h-[36px]">
             {!isReadOnly && (
               <div className="flex gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <button
@@ -157,44 +151,53 @@ const App: React.FC = () => {
       </div>
 
       {/* Header Section */}
-      <header className="max-w-7xl mx-auto mb-16 flex flex-col items-center justify-center text-center space-y-2">
+      <header className="max-w-[1600px] mx-auto mb-16 flex flex-col items-center justify-center text-center">
+        <div className="mb-6 flex flex-col items-center animate-in fade-in slide-in-from-bottom-2 duration-700">
+          <span className="text-zinc-400 font-black tracking-[1.2em] text-xl uppercase pl-[1.2em] mb-4">2 0 2 6</span>
+          <div className="h-[1px] w-48 bg-zinc-800"></div>
+        </div>
+        
         <EditableText
           value={studioName}
           onChange={setStudioName}
-          className="text-5xl md:text-8xl font-black tracking-tighter uppercase italic text-white leading-none text-center"
+          className="text-5xl md:text-9xl font-black tracking-tighter uppercase italic text-white leading-none text-center mb-6"
           readOnly={isReadOnly}
         />
-        <div className="h-[2px] w-20 bg-pink-600 my-6"></div>
-        <span className="text-zinc-400 font-bold tracking-[0.5em] text-xs uppercase pl-[0.5em]">
-          {t.schedule}
-        </span>
+        
+        <div className="flex items-center gap-6">
+          <div className="h-[2px] w-12 bg-pink-600 rounded-full"></div>
+          <span className="text-zinc-500 font-bold tracking-[0.8em] text-[10px] uppercase pl-[0.8em]">
+            {t.schedule}
+          </span>
+          <div className="h-[2px] w-12 bg-pink-600 rounded-full"></div>
+        </div>
       </header>
 
       {/* Timetable Grid */}
-      <div className="max-w-7xl mx-auto overflow-x-auto border border-zinc-800 rounded-2xl bg-zinc-950/50 backdrop-blur-xl shadow-2xl overflow-hidden mb-12">
-        <div className="min-w-[1000px]">
+      <div className="max-w-[1600px] mx-auto overflow-x-auto border border-zinc-800 rounded-2xl bg-zinc-950/50 backdrop-blur-xl shadow-2xl overflow-hidden mb-12">
+        <div className="min-w-[1400px]">
           {/* Table Header */}
-          <div className="grid grid-cols-[160px_repeat(7,1fr)] border-b border-zinc-800">
-            <div className="p-6 bg-zinc-900/80 border-r border-zinc-800 flex items-center justify-center">
-              <span className="text-[10px] font-black tracking-[0.3em] text-zinc-500 uppercase">{t.time}</span>
+          <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-zinc-800 bg-zinc-900/40">
+            <div className="p-8 border-r border-zinc-800 flex items-center justify-center">
+              <span className="text-[10px] font-black tracking-[0.4em] text-zinc-500 uppercase">{t.time}</span>
             </div>
             {DAYS.map(day => (
-              <div key={day} className="p-6 border-r last:border-r-0 border-zinc-800 flex flex-col items-center justify-center bg-zinc-900/40">
-                <span className="text-[10px] font-black text-pink-500 mb-1 tracking-widest">{day}</span>
-                <span className="text-2xl font-black tracking-tight">{DAY_LABELS[lang][day]}</span>
+              <div key={day} className="p-8 border-r last:border-r-0 border-zinc-800 flex flex-col items-center justify-center">
+                <span className="text-[11px] font-black text-pink-500 mb-1 tracking-widest">{day}</span>
+                <span className="text-3xl font-black tracking-tight">{DAY_LABELS[lang][day]}</span>
               </div>
             ))}
           </div>
 
           {/* Table Body */}
           {displaySchedule.map((row, rowIndex) => (
-            <div key={rowIndex} className="grid grid-cols-[160px_repeat(7,1fr)] border-b last:border-b-0 border-zinc-800 group/row min-h-[140px]">
+            <div key={rowIndex} className="grid grid-cols-[140px_repeat(7,1fr)] border-b last:border-b-0 border-zinc-800 group/row min-h-[160px]">
               {/* Time Slot Column */}
-              <div className="p-6 bg-zinc-900/30 border-r border-zinc-800 flex flex-col items-center justify-center text-center relative">
+              <div className="p-8 bg-zinc-900/30 border-r border-zinc-800 flex flex-col items-center justify-center text-center relative">
                 <EditableText
                   value={row.timeSlot}
                   onChange={(val) => updateTimeSlot(rowIndex, val)}
-                  className="text-[11px] font-bold tracking-tighter text-zinc-400 leading-tight text-center justify-center"
+                  className="text-[12px] font-bold tracking-tighter text-zinc-400 leading-tight text-center justify-center"
                   readOnly={isReadOnly}
                 />
                 {!isReadOnly && (
@@ -224,7 +227,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Footer Info */}
-      <footer className="max-w-7xl mx-auto mt-16 grid grid-cols-1 md:grid-cols-3 gap-12 pt-12 border-t border-zinc-900 text-zinc-600 uppercase text-[10px] tracking-[0.2em] font-bold">
+      <footer className="max-w-[1600px] mx-auto mt-24 grid grid-cols-1 md:grid-cols-3 gap-12 pt-12 border-t border-zinc-900 text-zinc-600 uppercase text-[10px] tracking-[0.2em] font-bold pb-16">
         <div className="flex flex-col gap-2">
           <h4 className="text-zinc-400 text-xs mb-1 tracking-[0.3em]">{t.location}</h4>
           <p className="font-medium">3F, K-Building, 50 Giji-ro, Wanju-gun, Jeonbuk State Korea</p>
@@ -264,7 +267,7 @@ const App: React.FC = () => {
           .text-pink-500 { color: #db2777 !important; }
           .min-h-screen { min-height: auto !important; }
           .overflow-x-auto { overflow-x: visible !important; }
-          .min-w-[1000px] { min-width: auto !important; width: 100% !important; }
+          .min-w-[1400px] { min-width: auto !important; width: 100% !important; }
           header { margin-bottom: 3rem !important; }
         }
       `}</style>
