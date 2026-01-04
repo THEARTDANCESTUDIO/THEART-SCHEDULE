@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScheduleRow, DAYS, DAY_LABELS, Language } from './types';
 import { INITIAL_SCHEDULE, STATIC_CONTENT_TRANSLATIONS } from './constants';
 import { TimetableCell } from './components/TimetableCell';
@@ -19,7 +19,7 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : INITIAL_SCHEDULE;
   });
 
-  // Secret toggle logic
+  // Secret toggle logic: 5 quick clicks on footer copyright
   const clickCountRef = useRef(0);
   const lastClickTimeRef = useRef(0);
 
@@ -35,23 +35,29 @@ const App: React.FC = () => {
     if (clickCountRef.current >= 5) {
       setIsReadOnly(prev => !prev);
       clickCountRef.current = 0;
-      alert(isReadOnly ? "관리자 모드가 활성화되었습니다." : "관리자 모드가 비활성화되었습니다.");
+      // Use a subtle visual hint instead of a blocking alert if preferred, but alert is clearer for the user
+      console.log("Admin mode toggled");
     }
   };
 
+  // Sync state to local storage
   useEffect(() => {
     localStorage.setItem('theart_dance_schedule', JSON.stringify(schedule));
   }, [schedule]);
 
   useEffect(() => {
     localStorage.setItem('theart_lang', lang);
-    
-    // Auto-update content if it matches static translations
-    const newSchedule = schedule.map(row => ({
+  }, [lang]);
+
+  // Derived schedule with translations applied based on current language
+  // This approach is more reactive than manual state swapping
+  const displaySchedule = useMemo(() => {
+    return schedule.map(row => ({
       ...row,
       days: Object.fromEntries(
         Object.entries(row.days).map(([day, cell]) => {
           let translatedText = cell.className;
+          // Only auto-translate if the text matches one of our known static strings
           for (const mapping of Object.values(STATIC_CONTENT_TRANSLATIONS)) {
             const versions = Object.values(mapping);
             if (versions.includes(cell.className)) {
@@ -63,8 +69,7 @@ const App: React.FC = () => {
         })
       )
     }));
-    setSchedule(newSchedule);
-  }, [lang]);
+  }, [schedule, lang]);
 
   const t = UI_TRANSLATIONS[lang];
 
@@ -103,35 +108,36 @@ const App: React.FC = () => {
   const resetToDefault = () => {
     if (confirm(t.resetConfirm || '초기화 하시겠습니까?')) {
       setSchedule(INITIAL_SCHEDULE);
+      localStorage.removeItem('theart_dance_schedule');
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8 selection:bg-pink-500/30">
-      {/* Top Bar for Actions & Language */}
+      {/* Action Bar */}
       <div className="max-w-7xl mx-auto mb-8 flex items-center justify-between no-print">
         <div className="flex gap-2">
             {!isReadOnly && (
-              <>
+              <div className="flex gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <button
                     onClick={() => setIsReadOnly(true)}
-                    className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded border bg-pink-600 border-pink-500 text-white shadow-lg shadow-pink-900/40 transition-all"
+                    className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded bg-pink-600 hover:bg-pink-500 text-white shadow-lg transition-all"
                 >
-                    {t.lock || 'LOCK'}
+                    FINISH EDITING
                 </button>
                 <button
                     onClick={addRow}
-                    className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded border border-zinc-700 bg-zinc-800 text-white hover:bg-zinc-700 transition-all"
+                    className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded border border-zinc-700 bg-zinc-800 text-white hover:bg-zinc-700 transition-all"
                 >
                     + ADD SLOT
                 </button>
                 <button
                     onClick={resetToDefault}
-                    className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded border border-red-900/30 bg-red-950/20 text-red-500 hover:bg-red-950/40 transition-all"
+                    className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded border border-red-900/30 bg-red-950/20 text-red-500 hover:bg-red-950/40 transition-all"
                 >
                     {t.reset}
                 </button>
-              </>
+              </div>
             )}
         </div>
         
@@ -141,7 +147,7 @@ const App: React.FC = () => {
                 key={l}
                 onClick={() => setLang(l)}
                 className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${
-                lang === l ? 'bg-zinc-100 text-black shadow-lg scale-105' : 'text-zinc-500 hover:text-zinc-300'
+                lang === l ? 'bg-zinc-100 text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
                 }`}
             >
                 {l}
@@ -158,14 +164,14 @@ const App: React.FC = () => {
           className="text-5xl md:text-8xl font-black tracking-tighter uppercase italic text-white leading-none text-center"
           readOnly={isReadOnly}
         />
-        <div className="h-px w-24 bg-pink-600 my-4"></div>
-        <span className="text-zinc-400 font-bold tracking-[0.4em] text-xs uppercase pl-[0.4em]">
+        <div className="h-[2px] w-20 bg-pink-600 my-6"></div>
+        <span className="text-zinc-400 font-bold tracking-[0.5em] text-xs uppercase pl-[0.5em]">
           {t.schedule}
         </span>
       </header>
 
       {/* Timetable Grid */}
-      <div className="max-w-7xl mx-auto overflow-x-auto border border-zinc-800 rounded-2xl bg-zinc-950/50 backdrop-blur-xl shadow-2xl overflow-hidden">
+      <div className="max-w-7xl mx-auto overflow-x-auto border border-zinc-800 rounded-2xl bg-zinc-950/50 backdrop-blur-xl shadow-2xl overflow-hidden mb-12">
         <div className="min-w-[1000px]">
           {/* Table Header */}
           <div className="grid grid-cols-[160px_repeat(7,1fr)] border-b border-zinc-800">
@@ -181,20 +187,20 @@ const App: React.FC = () => {
           </div>
 
           {/* Table Body */}
-          {schedule.map((row, rowIndex) => (
-            <div key={rowIndex} className="grid grid-cols-[160px_repeat(7,1fr)] border-b last:border-b-0 border-zinc-800 group/row">
+          {displaySchedule.map((row, rowIndex) => (
+            <div key={rowIndex} className="grid grid-cols-[160px_repeat(7,1fr)] border-b last:border-b-0 border-zinc-800 group/row min-h-[140px]">
               {/* Time Slot Column */}
-              <div className="p-6 bg-zinc-900/30 border-r border-zinc-800 flex flex-col items-center justify-center text-center relative group">
+              <div className="p-6 bg-zinc-900/30 border-r border-zinc-800 flex flex-col items-center justify-center text-center relative">
                 <EditableText
                   value={row.timeSlot}
                   onChange={(val) => updateTimeSlot(rowIndex, val)}
-                  className="text-[11px] font-bold tracking-tighter text-zinc-400 leading-tight text-center"
+                  className="text-[11px] font-bold tracking-tighter text-zinc-400 leading-tight text-center justify-center"
                   readOnly={isReadOnly}
                 />
                 {!isReadOnly && (
                     <button 
                       onClick={() => removeRow(rowIndex)}
-                      className="absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-red-600 rounded-full text-white text-[8px] hover:scale-110 transition-all no-print z-10"
+                      className="absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 p-1.5 bg-red-600 rounded-full text-white text-[8px] hover:scale-110 transition-all no-print z-10"
                     >
                       ✕
                     </button>
@@ -203,7 +209,7 @@ const App: React.FC = () => {
 
               {/* Day Columns */}
               {DAYS.map(day => (
-                <div key={`${rowIndex}-${day}`} className="border-r last:border-r-0 border-zinc-800 flex items-center justify-center transition-colors hover:bg-white/[0.02]">
+                <div key={`${rowIndex}-${day}`} className="border-r last:border-r-0 border-zinc-800 flex items-stretch justify-center transition-colors hover:bg-white/[0.02]">
                   <TimetableCell
                     cell={row.days[day]}
                     lang={lang}
@@ -221,7 +227,7 @@ const App: React.FC = () => {
       <footer className="max-w-7xl mx-auto mt-16 grid grid-cols-1 md:grid-cols-3 gap-12 pt-12 border-t border-zinc-900 text-zinc-600 uppercase text-[10px] tracking-[0.2em] font-bold">
         <div className="flex flex-col gap-2">
           <h4 className="text-zinc-400 text-xs mb-1 tracking-[0.3em]">{t.location}</h4>
-          <p className="font-medium">3F, K-Building, 50 Giji-ro, Iseo-myeon, Wanju-gun, Jeonbuk State Korea</p>
+          <p className="font-medium">3F, K-Building, 50 Giji-ro, Wanju-gun, Jeonbuk State Korea</p>
         </div>
         <div className="flex flex-col gap-2">
           <h4 className="text-zinc-400 text-xs mb-1 tracking-[0.3em]">{t.contact}</h4>
@@ -229,16 +235,23 @@ const App: React.FC = () => {
         </div>
         <div className="text-right flex flex-col justify-end gap-1">
           <p className="text-zinc-500">© 2017 {studioName}</p>
-          <p 
+          <div 
             onClick={handleSecretToggle}
             className="text-pink-600/60 font-black cursor-pointer select-none active:scale-95 transition-transform"
           >
             {t.allRights}
-          </p>
+          </div>
         </div>
       </footer>
       
       <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-in {
+          animation: fadeIn 0.5s ease-out;
+        }
         @media print {
           .no-print { display: none !important; }
           body { background-color: white !important; color: black !important; padding: 0 !important; }
@@ -246,7 +259,7 @@ const App: React.FC = () => {
           .bg-zinc-950 { background-color: white !important; }
           .bg-zinc-900 { background-color: #f4f4f5 !important; }
           .border-zinc-800 { border-color: #e4e4e7 !important; }
-          .text-zinc-100, .text-white { color: black !important; }
+          .text-white { color: black !important; }
           .text-zinc-400, .text-zinc-500, .text-zinc-600 { color: #52525b !important; }
           .text-pink-500 { color: #db2777 !important; }
           .min-h-screen { min-height: auto !important; }
