@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ScheduleRow, DAYS, DAY_LABELS, Language } from './types';
 import { INITIAL_SCHEDULE, STATIC_CONTENT_TRANSLATIONS } from './constants';
@@ -10,13 +9,25 @@ const App: React.FC = () => {
   const [studioName, setStudioName] = useState('THEART DANCE STUDIO');
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [lang, setLang] = useState<Language>(() => {
-    const saved = localStorage.getItem('theart_lang');
-    return (saved as Language) || 'ko';
+    try {
+      const saved = localStorage.getItem('theart_lang');
+      return (saved as Language) || 'ko';
+    } catch {
+      return 'ko';
+    }
   });
   
   const [schedule, setSchedule] = useState<ScheduleRow[]>(() => {
-    const saved = localStorage.getItem('theart_dance_schedule');
-    return saved ? JSON.parse(saved) : INITIAL_SCHEDULE;
+    try {
+      const saved = localStorage.getItem('theart_dance_schedule');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_SCHEDULE;
+      }
+    } catch (e) {
+      console.error("Failed to load schedule from localStorage", e);
+    }
+    return INITIAL_SCHEDULE;
   });
 
   const clickCountRef = useRef(0);
@@ -34,12 +45,15 @@ const App: React.FC = () => {
     if (clickCountRef.current >= 5) {
       setIsReadOnly(prev => !prev);
       clickCountRef.current = 0;
-      console.log("Admin mode toggled");
     }
   };
 
   useEffect(() => {
-    localStorage.setItem('theart_dance_schedule', JSON.stringify(schedule));
+    try {
+      localStorage.setItem('theart_dance_schedule', JSON.stringify(schedule));
+    } catch (e) {
+      console.warn("Storage quota exceeded or error", e);
+    }
   }, [schedule]);
 
   useEffect(() => {
@@ -108,7 +122,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8 selection:bg-pink-500/30">
-      {/* Top Action Bar */}
       <div className="max-w-[1600px] mx-auto mb-8 flex items-center justify-between no-print">
         <div className="flex gap-2 min-h-[36px]">
             {!isReadOnly && (
@@ -150,7 +163,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Header Section */}
       <header className="max-w-[1600px] mx-auto mb-16 flex flex-col items-center justify-center text-center">
         <div className="mb-6 flex flex-col items-center animate-in fade-in slide-in-from-bottom-2 duration-700">
           <span className="text-zinc-400 font-black tracking-[1.2em] text-xl uppercase pl-[1.2em] mb-4">2 0 2 6</span>
@@ -173,10 +185,8 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Timetable Grid */}
       <div className="max-w-[1600px] mx-auto overflow-x-auto border border-zinc-800 rounded-2xl bg-zinc-950/50 backdrop-blur-xl shadow-2xl overflow-hidden mb-12">
         <div className="min-w-[1400px]">
-          {/* Table Header */}
           <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-zinc-800 bg-zinc-900/40">
             <div className="p-8 border-r border-zinc-800 flex items-center justify-center">
               <span className="text-[10px] font-black tracking-[0.4em] text-zinc-500 uppercase">{t.time}</span>
@@ -189,10 +199,8 @@ const App: React.FC = () => {
             ))}
           </div>
 
-          {/* Table Body */}
           {displaySchedule.map((row, rowIndex) => (
             <div key={rowIndex} className="grid grid-cols-[140px_repeat(7,1fr)] border-b last:border-b-0 border-zinc-800 group/row min-h-[160px]">
-              {/* Time Slot Column */}
               <div className="p-8 bg-zinc-900/30 border-r border-zinc-800 flex flex-col items-center justify-center text-center relative">
                 <EditableText
                   value={row.timeSlot}
@@ -210,7 +218,6 @@ const App: React.FC = () => {
                 )}
               </div>
 
-              {/* Day Columns */}
               {DAYS.map(day => (
                 <div key={`${rowIndex}-${day}`} className="border-r last:border-r-0 border-zinc-800 flex items-stretch justify-center transition-colors hover:bg-white/[0.02]">
                   <TimetableCell
@@ -226,7 +233,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Footer Info */}
       <footer className="max-w-[1600px] mx-auto mt-24 grid grid-cols-1 md:grid-cols-3 gap-12 pt-12 border-t border-zinc-900 text-zinc-600 uppercase text-[10px] tracking-[0.2em] font-bold pb-16">
         <div className="flex flex-col gap-2">
           <h4 className="text-zinc-400 text-xs mb-1 tracking-[0.3em]">{t.location}</h4>
